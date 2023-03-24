@@ -1,7 +1,9 @@
 # arduino_cable_tester
 
 This program checks the continuity of diiferent type of cables.
-3 push buttons(Up, Down, Select) are used with one 20x4 Liquid crystal display to select required test.  
+
+3 push buttons(Up, Down, Select) are used with one 20x4 Liquid crystal display to select required test.
+
 After test complete LCD will display errors if found.  
 
 Test will automatically start after completion until user stops.
