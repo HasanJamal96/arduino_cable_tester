@@ -3,7 +3,6 @@
 
 /*
   Arduino Mega 2560 default I2C pin are 20,21 (SDA, SCL)
-  
 */
 
 
@@ -74,7 +73,7 @@ uint8_t multipleList[totalPins][totalPins];
 uint8_t pCount[totalPins];
 
 uint32_t lastErrorDisplay = 0;
-const uint16_t errorDisplayDelay = 10;
+const uint16_t errorDisplayDelay = 1000;
 
 
 typedef enum : uint8_t {

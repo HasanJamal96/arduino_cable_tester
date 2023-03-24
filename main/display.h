@@ -31,8 +31,6 @@ void updateMenuPage() {
 }
 
 void resetMenu() {
-  // cursorIndex = 0;
-  // currentPage = 0;
   updateMenuPage();
   lcd.setCursor(0, cursorIndex);
   lcd.printstr(">");
@@ -49,8 +47,8 @@ void clearLcd(uint8_t startRow, uint8_t startCol, uint8_t endRow, uint8_t endCol
 
 void moveCursor(bool up = false) {
   bool updatePage = false;
+  clearLcd(cursorIndex,0,cursorIndex,0);
   if(!up) {
-    clearLcd(cursorIndex,0,cursorIndex,0);
     cursorIndex ++;
     if(cursorIndex > 3) {
       currentPage ++;
@@ -71,7 +69,6 @@ void moveCursor(bool up = false) {
     }
   }
   else {
-    clearLcd(cursorIndex,0,cursorIndex,0);
     cursorIndex--;
     if(cursorIndex > 250) {
       cursorIndex = 3;

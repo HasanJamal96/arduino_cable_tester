@@ -21,9 +21,7 @@ bool checkInputs() {
       errorFound = true;
       delay(10);
     }
-    // Serial.print(" " + String(i+1));
   }
-  // Serial.println();
   return errorFound;
 }
 
@@ -39,8 +37,7 @@ bool isAvailable(uint8_t val) {
 bool testUpdate() {
   currentPinIndex++;
   if(currentPinIndex < 26) {
-    // Serial.print("OUTPUT: " + String(currentPinIndex + 1) + " -> INPUTs:");
-    strcpy(errorsList[errorCount], ("In:" + String(currentPinIndex + 1) + " Out: ").c_str());
+    strcpy(errorsList[errorCount], ("Out:" + String(currentPinIndex + 1) + " In: ").c_str());
     if (currentPinIndex < lastIndex) {
       uint8_t resetIndex = currentPinIndex;
       switch (testType) {
@@ -90,6 +87,7 @@ bool testUpdate() {
       }
       digitalWrite(outputPins[currentPinIndex], LOW);
     }
+    delay(10);
     return false;
   }
   return true;

@@ -64,6 +64,7 @@ void loop() {
         Serial.println("[TS] IDLE");
       #endif
       testState = IDLE;
+      resetMenu();
     }
     else {
       if(testState == IDLE || testState == COMPLETE) {
@@ -107,15 +108,6 @@ void loop() {
               multipleList[i][x] = multiListArr[x];
             }
           }
-          // for(uint8_t i=0; i<outCount; i++) {
-          //   Serial.print("Row: " + String(i) + "-> ");
-          //   for(uint8_t x=0; x<pCount[i]; x++) {
-          //     Serial.print(multipleList[i][x]);
-          //     Serial.print(",");
-          //     delay(10);
-          //   }
-          //   Serial.println();
-          // }
         }
         
         errorCount = 0;
@@ -141,41 +133,46 @@ void loop() {
         curResult = NEGATIVE;
       }
       errorDisplayedCount = 0;
-      lastErrorDisplay = 0;
+      lastErrorDisplay = millis();
       #ifdef DEBUG
         Serial.println("[TS] COMPLETE");
       #endif
       lcd.clear();
       displyText(0, 3, "Test Complete");
+      lcd.setCursor(0, 1);
+      lcd.printstr(doc["N"]);
       leds.showResult();
-      
-      for(uint8_t i=0; i<errorCount; i++) {
-        Serial.println(errorsList[i]);
-        delay(10);
-      }
+      // // uncomment following to display error msgs of serial monitor 
+      // for(uint8_t i=0; i<errorCount; i++) {
+      //   Serial.println(errorsList[i]);
+      //   delay(10);
+      // }
       delay(2000);
     }
   }
 
   else if(testState == COMPLETE) {
-    // display Errors
-    // if(millis() - lastErrorDisplay >= errorDisplayDelay) {
-    //   clearLcd(2, 0, 3, 19);
-    //   lcd.setCursor(0, 2);
-    //   lcd.printstr(errorsList[errorDisplayedCount]);
-    //   errorDisplayedCount ++;
-    //   lastErrorDisplay = millis();
-    // }
+    if(millis() - lastErrorDisplay >= errorDisplayDelay) {
+      clearLcd(2, 0, 3, 19);
+      lcd.setCursor(0, 2);
+      // Serial.println(errorDisplayedCount);
+      lcd.printstr(errorsList[errorDisplayedCount]);
+      errorDisplayedCount ++;
+      lastErrorDisplay = millis();
+    }
     
-    // if(errorDisplayedCount == errorCount) {
-      // testState = TESTING;
-      testState = IDLE;
-      resetMenu();
-      delay(100);
+    if(errorDisplayedCount == errorCount) {
+      testState = TESTING;
+      errorCount = 0;
+      currentPinIndex = 255;
+      disableAllOutputs();
+      // testState = IDLE;
+      // resetMenu();
+      delay(1000);
       #ifdef DEBUG
         Serial.println("[TS] IDLE");
       #endif
-    // }
+    }
   }
   else if(testState == IDLE) {
     buttonUp.read();
