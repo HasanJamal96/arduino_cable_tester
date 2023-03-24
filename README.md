@@ -1,6 +1,6 @@
 # arduino_cable_tester
 
-This program checks the continnuity of diiferent type of cables.
+This program checks the continuity of diiferent type of cables.
 
 ## Cable Types
 - LK25 M CABLE
