@@ -42,8 +42,8 @@ void setup() {
   
   lcd.clear();
   displyText(0, 4, "Cable Tester");
-  displyText(1, 8, "v1.3");
-  delay(2000);
+  displyText(1, 8, "v1.4");
+  delay(500);
   lcd.clear();
   resetMenu();
   
@@ -56,138 +56,145 @@ void setup() {
   #endif
 }
 
+void idleState() {
+  testState = IDLE;
+  resetMenu();
+  leds.resetResult();
+  resetTestParams();
+  clearAllErrors();
+}
+
+void clearAllErrors() {
+  for(uint8_t i=0; i<totalPins; i++) {
+    // errorsList[i][0] = ' ';
+    strcpy(errorsList[i], " ");
+  }
+  Serial.println("cleared");
+}
+
+bool restart = false;
 void loop() {
   buttonTest.read();
   if(buttonTest.wasReleased()) {
-    if(buttonTest.pressedFor(2000)) { // Reset test
-      #ifdef DEBUG
-        Serial.println("[TS] IDLE");
-      #endif
-      testState = IDLE;
-      resetMenu();
-    }
-    else {
-      if(testState == IDLE || testState == COMPLETE) {
-        lcd.clear();
-        displyText(0, 6, "Testing");
-        leds.resetResult();
-        uint8_t index = getSelectedIndex();
+    if(testState == IDLE) {
+      lcd.clear();
+      displyText(0, 6, "Testing");
+      leds.resetResult();
+      uint8_t index = getSelectedIndex();
+      
+      getTestInfo(singleTest, index);
+      deserializeJson(doc, singleTest);
+      delay(100);
+      
+      testType = doc["R"].as<uint8_t>();
+      lastIndex = doc["p"].as<uint8_t>();
+      
+      lcd.setCursor(0, 1);
+      lcd.printstr(doc["N"]);
         
-        getTestInfo(singleTest, index);
-        deserializeJson(doc, singleTest);
-        delay(100);
-        
-        const char *relation = doc["R"];
-        lastIndex = doc["p"].as<uint8_t>();
-
-        if(strcmp(relation, "L") == 0)
-          testType = 0;
-        else if(strcmp(relation, "LS") == 0)
-          testType = 1;
-        else if(strcmp(relation, "NL") == 0)
-          testType = 2;
-        else if(strcmp(relation, "M") == 0) {
-          testType = 3;
+      if(testType > 0) {
+        JsonArray skipListArr =  doc["S"];
+        skipCount = skipListArr.size();
+        for(uint8_t i=0; i<skipCount; i++) {
+          skipList[i] = skipListArr[i];
         }
-          
-        if(testType > 0) {
-          JsonArray skipListArr =  doc["S"];
-          skipCount = skipListArr.size();
-          for(uint8_t i=0; i<skipCount; i++) {
-            skipList[i] = skipListArr[i];
+      }
+      if(testType == 3) {
+        JsonArray multiListArr;
+        JsonArray outArr =  doc["O"];
+        outCount = outArr.size();
+        for(uint8_t i=0; i<outCount; i++) {
+          multiListArr =  outArr[i];
+          pCount[i] = multiListArr.size();
+          for(uint8_t x=0; x<pCount[i]; x++) {
+            multipleList[i][x] = multiListArr[x];
           }
         }
-        if(testType == 3) {
-          JsonArray multiListArr;
-          JsonArray outArr =  doc["O"];
-          outCount = outArr.size();
-          for(uint8_t i=0; i<outCount; i++) {
-            multiListArr =  outArr[i];
-            pCount[i] = multiListArr.size();
-            for(uint8_t x=0; x<pCount[i]; x++) {
-              multipleList[i][x] = multiListArr[x];
-            }
-          }
-        }
-        
-        errorCount = 0;
-        currentPinIndex = 255;
-        disableAllOutputs();
-        preResult = curResult = NONE; // reset test results
-        testState = TESTING;
       }
       
-      #ifdef DEBUG
-        Serial.println("[TS] TESTING Start");
-      #endif
+      resetTestParams();
+      preResult = curResult = NONE; // reset test results
+      testState = TESTING;
+      clearAllErrors();
     }
+    
+    else if(testState == TESTING) { // Reset errors if test button is pressed during testing
+      clearLcd(2, 0, 3, 19);
+      errorDisplayedCount = 0;
+      resetTestParams();
+      preResult = curResult = NONE;
+      clearAllErrors();
+      restart = false;
+    }
+    #ifdef DEBUG
+      Serial.println("[TS] TESTING Start");
+    #endif
   }
 
   if(testState == TESTING) {
-    if(testUpdate()) {
-      testState = COMPLETE;
-      if(errorCount > 0) {
-        curResult = POSITIVE;
+    if(!restart) {
+      if(testUpdate()) {
+        if(curResult == NEGATIVE) {
+          clearLcd(2, 0, 3, 19);
+          lcd.setCursor(0, 2);
+          clearAllErrors();
+        }
+        leds.showResult();
+        restart = true;
+        completeAt = millis();
       }
-      else {
-        curResult = NEGATIVE;
-      }
-      errorDisplayedCount = 0;
-      lastErrorDisplay = millis();
-      #ifdef DEBUG
-        Serial.println("[TS] COMPLETE");
-      #endif
-      lcd.clear();
-      displyText(0, 3, "Test Complete");
-      lcd.setCursor(0, 1);
-      lcd.printstr(doc["N"]);
-      leds.showResult();
-      // // uncomment following to display error msgs of serial monitor 
-      // for(uint8_t i=0; i<errorCount; i++) {
-      //   Serial.println(errorsList[i]);
-      //   delay(10);
-      // }
-      delay(2000);
+    }
+    if(millis() - checkError >= 20) {
+      if(millis() - lastErrorDisplay >= errorDisplayDelay) {
+          bool foundError = false;
+          for(uint8_t i=errorDisplayedCount; i<totalPins; i++) {
+            if(strcmp(errorsList[i], " ") != 0) {
+              clearLcd(2, 0, 3, 19);
+              lcd.setCursor(0, 2);
+              lcd.printstr(errorsList[i]);
+              errorDisplayedCount = i+1;
+              foundError = true;
+              lastErrorDisplay = millis();
+              i = totalPins;
+            }
+          }
+          if(errorDisplayedCount == totalPins) {
+            errorDisplayedCount = 0;
+          }
+          if(!foundError) {
+            errorDisplayedCount = 0;
+          }
+        }
+      checkError = millis();
     }
   }
-
-  else if(testState == COMPLETE) {
-    if(millis() - lastErrorDisplay >= errorDisplayDelay) {
-      clearLcd(2, 0, 3, 19);
-      lcd.setCursor(0, 2);
-      // Serial.println(errorDisplayedCount);
-      lcd.printstr(errorsList[errorDisplayedCount]);
-      errorDisplayedCount ++;
-      lastErrorDisplay = millis();
-    }
-    
-    if(errorDisplayedCount == errorCount) {
-      testState = TESTING;
-      errorCount = 0;
-      currentPinIndex = 255;
-      disableAllOutputs();
-      // testState = IDLE;
-      // resetMenu();
-      delay(1000);
-      #ifdef DEBUG
-        Serial.println("[TS] IDLE");
-      #endif
+  if(restart) {
+    if(millis() - completeAt >= 500) {
+      restart = false;
     }
   }
-  else if(testState == IDLE) {
-    buttonUp.read();
-    buttonDown.read();
+  buttonUp.read();
+  buttonDown.read();
 
-    if(buttonUp.wasReleased() || buttonUp.isLongPress(300)) {
-      #ifdef DEBUG
-        Serial.println("[Button] Up");
-      #endif
+  if(buttonUp.wasReleased() || buttonUp.isLongPress(300)) {
+    #ifdef DEBUG
+      Serial.println("[Button] Up");
+    #endif
+    if(testState != IDLE) {
+      idleState();
+    }
+    else {
       moveCursor(true);
     }
-    else if(buttonDown.wasReleased() || buttonDown.isLongPress(300)) {
-      #ifdef DEBUG
-        Serial.println("[Button] Down");
-      #endif
+  }
+  else if(buttonDown.wasReleased() || buttonDown.isLongPress(300)) {
+    #ifdef DEBUG
+      Serial.println("[Button] Down");
+    #endif
+    if(testState != IDLE) {
+      idleState();
+    }
+    else {
       moveCursor();
     }
   }

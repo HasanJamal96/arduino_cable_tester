@@ -1,3 +1,4 @@
+#include "HardwareSerial.h"
 void initializeCablePins() {
   for (uint8_t i = 0; i < totalPins; i++) {
     pinMode(inputPins[i], INPUT);    // connect external pull down resistor
@@ -13,15 +14,27 @@ void disableAllOutputs() {
   }
 }
 
+void resetTestParams() {
+  // errorCount = 0;
+  currentPinIndex = 255;
+  disableAllOutputs();
+}
+
 bool checkInputs() {
   bool errorFound = false;
   for (uint8_t i = 0; i < totalPins; i++) {
     if (digitalRead(inputPins[i]) != expectedState[i]) {
-      strcat(errorsList[errorCount], (String(i + 1) + ",").c_str());
+      strcat(errorsList[currentPinIndex], (String(i + 1) + ",").c_str());
       errorFound = true;
-      delay(10);
+      delay(1);
     }
   }
+  if(!errorFound) {
+    strcpy(errorsList[currentPinIndex], " ");
+  }
+  // else {
+  //   Serial.println(errorsList[currentPinIndex]);
+  // }
   return errorFound;
 }
 
@@ -36,8 +49,12 @@ bool isAvailable(uint8_t val) {
 
 bool testUpdate() {
   currentPinIndex++;
+  if(currentPinIndex == 0) {
+    curResult = NEGATIVE;
+    disableAllOutputs();
+  }
   if(currentPinIndex < 26) {
-    strcpy(errorsList[errorCount], ("Out:" + String(currentPinIndex + 1) + " In: ").c_str());
+    strcpy(errorsList[currentPinIndex], ("Out:" + String(currentPinIndex + 1) + " In: ").c_str());
     if (currentPinIndex < lastIndex) {
       uint8_t resetIndex = currentPinIndex;
       switch (testType) {
@@ -69,7 +86,8 @@ bool testUpdate() {
       }
 
       if (checkInputs()) {
-        errorCount++;
+        curResult = POSITIVE;
+        // errorCount++;
       }
       digitalWrite(outputPins[currentPinIndex], LOW);
       expectedState[resetIndex] = false;
@@ -82,13 +100,15 @@ bool testUpdate() {
     }
     else {
       digitalWrite(outputPins[currentPinIndex], HIGH);
+      expectedState[currentPinIndex] = false;
       if (checkInputs()) {
-        errorCount++;
+        curResult = POSITIVE;
+        // errorCount++;
       }
       digitalWrite(outputPins[currentPinIndex], LOW);
     }
-    delay(10);
     return false;
   }
+  currentPinIndex = 255;
   return true;
 }
