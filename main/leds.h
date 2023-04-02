@@ -45,10 +45,14 @@ class Leds {
           }
           else {
             digitalWrite(LED_RED, HIGH);
+            preResult = curResult;
           }
           break;
       }
-      preResult = curResult;
+//      if(firstTest) {
+//        preResult = curResult;
+//        firstTest = false;
+//      }
     }
 
     void resetResult() {

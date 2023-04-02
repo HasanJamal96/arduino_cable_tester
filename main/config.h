@@ -54,6 +54,8 @@ const uint8_t outputPins[totalPins] = {
 
 ////////////////////////////////////////////////////////////// Test
 
+bool firstTest = false;
+
 char singleTest[512];
 uint8_t errorCount = 0; 
 uint8_t errorDisplayedCount = 0; 

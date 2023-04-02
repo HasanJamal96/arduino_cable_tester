@@ -116,6 +116,7 @@ void loop() {
       preResult = curResult = NONE; // reset test results
       testState = TESTING;
       clearAllErrors();
+      firstTest = true;
     }
     
     else if(testState == TESTING) { // Reset errors if test button is pressed during testing
@@ -125,6 +126,7 @@ void loop() {
       preResult = curResult = NONE;
       clearAllErrors();
       restart = false;
+      firstTest = true;
     }
     #ifdef DEBUG
       Serial.println("[TS] TESTING Start");
